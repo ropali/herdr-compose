@@ -47,7 +47,7 @@ To install `herdr-compose` from source for local development:
 
 ```bash
 # Clone the repository
-git clone https://github.com/USERNAME/herdr-compose.git
+git clone https://github.com/ropali/herdr-compose.git
 cd herdr-compose
 
 # Install editable package with dev dependencies using uv
