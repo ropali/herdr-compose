@@ -16,10 +16,11 @@ dependencies = [
 [project.scripts]
 herdr-compose = "herdr_compose.cli:main"
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
