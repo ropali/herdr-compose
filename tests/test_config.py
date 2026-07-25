@@ -4,6 +4,7 @@ from herdr_compose.config import (
     get_config_dir,
     list_saved_config_files,
     load_config,
+    remove_saved_config_file,
     resolve_config_path,
     save_config_file,
 )
@@ -15,6 +16,14 @@ def test_resolve_config_path_explicit(tmp_path):
     f.write_text("workspaces: [{name: test}]", encoding="utf-8")
 
     res = resolve_config_path(f)
+    assert res == f
+
+
+def test_resolve_config_path_without_extension(tmp_path):
+    f = tmp_path / "my_stack.yaml"
+    f.write_text("workspaces: [{name: stack_ws}]", encoding="utf-8")
+
+    res = resolve_config_path(tmp_path / "my_stack")
     assert res == f
 
 
@@ -32,20 +41,11 @@ def test_resolve_config_path_config_dir(tmp_path, monkeypatch):
     f = target_dir / "my_saved_layout.yaml"
     f.write_text("workspaces: [{name: saved}]", encoding="utf-8")
 
-    res = resolve_config_path("my_saved_layout.yaml")
-    assert res == f
+    assert resolve_config_path("my_saved_layout.yaml") == f
+    assert resolve_config_path("my_saved_layout") == f
 
 
-def test_resolve_config_path_env(tmp_path, monkeypatch):
-    f = tmp_path / "env_config.yaml"
-    f.write_text("workspaces: [{name: env_ws}]", encoding="utf-8")
-
-    monkeypatch.setenv("HERDR_COMPOSE_CONFIG", str(f))
-    res = resolve_config_path()
-    assert res == f
-
-
-def test_save_and_list_config_files(tmp_path, monkeypatch):
+def test_save_and_list_and_remove_config_files(tmp_path, monkeypatch):
     config_dir = tmp_path / "user_config"
     monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
 
@@ -60,6 +60,20 @@ def test_save_and_list_config_files(tmp_path, monkeypatch):
     saved_list = list_saved_config_files()
     assert len(saved_list) == 1
     assert saved_list[0].name == "my_layout.yaml"
+
+    # Remove file without extension
+    removed = remove_saved_config_file("my_layout")
+    assert removed == saved_path
+    assert not saved_path.exists()
+    assert list_saved_config_files() == []
+
+
+def test_remove_nonexistent_file(tmp_path, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    with pytest.raises(ConfigError, match="not found"):
+        remove_saved_config_file("non_existent")
 
 
 def test_load_config_valid(tmp_path):

@@ -49,6 +49,24 @@ def test_cli_list_command(tmp_path, capsys, monkeypatch):
     assert "(1 workspace)" in captured_list
 
 
+def test_cli_remove_command(tmp_path, capsys, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    target = tmp_path / "to_delete.yaml"
+    target.write_text("workspaces:\n  - name: delete_me\n", encoding="utf-8")
+
+    main(["save", str(target)], standalone_mode=False)
+    saved_file = config_dir / "herdr-compose" / "to_delete.yaml"
+    assert saved_file.exists()
+
+    # Remove using filename without extension
+    main(["remove", "to_delete"], standalone_mode=False)
+    captured = capsys.readouterr().out
+    assert "Removed saved configuration file: to_delete.yaml" in captured
+    assert not saved_file.exists()
+
+
 def test_cli_validate_command(tmp_path, capsys):
     target = tmp_path / "valid.yaml"
     target.write_text("workspaces:\n  - name: test_ws\n", encoding="utf-8")

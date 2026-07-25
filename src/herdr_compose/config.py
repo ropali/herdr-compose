@@ -50,12 +50,38 @@ def save_config_file(
     load_config(src)
 
     filename = target_filename or src.name
+    if not filename.endswith((".yaml", ".yml")):
+        filename += ".yaml"
+
     config_dir = get_config_dir()
     config_dir.mkdir(parents=True, exist_ok=True)
 
     dest = config_dir / filename
     dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     return dest
+
+
+def remove_saved_config_file(filename: str | Path) -> Path:
+    """Remove a saved layout configuration file from ~/.config/herdr-compose/."""
+    raw_str = str(filename).strip()
+    config_dir = get_config_dir()
+
+    p_raw = Path(raw_str)
+    if p_raw.suffix.lower() in (".yaml", ".yml"):
+        exts = [""]
+    else:
+        exts = ["", ".yaml", ".yml"]
+
+    for ext in exts:
+        target_name = p_raw.name + ext
+        target_path = config_dir / target_name
+        if target_path.is_file():
+            target_path.unlink()
+            return target_path
+
+    raise ConfigError(
+        f"Saved configuration file '{filename}' not found in '{config_dir}'."
+    )
 
 
 def resolve_config_path(
@@ -65,8 +91,8 @@ def resolve_config_path(
     """Resolve the layout configuration file path.
 
     Search priority for explicit user_path:
-    1. Exact path if provided (e.g., ./examples/complex_multi_workspace.yaml)
-    2. Default user config directory: ~/.config/herdr-compose/<filename>
+    - If user_path has no .yaml/.yml extension, try user_path, user_path.yaml, user_path.yml.
+    - Check exact paths first, then look in default config directory (~/.config/herdr-compose/).
 
     Search priority when user_path is None:
     1. HERDR_COMPOSE_CONFIG or HERDR_LAYOUT_CONFIG environment variable
@@ -75,20 +101,28 @@ def resolve_config_path(
     """
     if user_path:
         raw_str = str(user_path).strip()
-        expanded_str = expand_path(raw_str)
-        p = Path(expanded_str)
+        p_raw = Path(expand_path(raw_str))
 
-        # 1. Exact path check
-        if p.is_file():
-            return p
+        if p_raw.suffix.lower() in (".yaml", ".yml"):
+            exts = [""]
+        else:
+            exts = ["", ".yaml", ".yml"]
 
-        # 2. Check default user config directory (~/.config/herdr-compose/<filename>)
-        config_dir_file = get_config_dir() / Path(raw_str).name
-        if config_dir_file.is_file():
-            return config_dir_file
+        for ext in exts:
+            candidate_str = raw_str + ext
+            expanded_p = Path(expand_path(candidate_str))
+
+            # 1. Exact path check
+            if expanded_p.is_file():
+                return expanded_p
+
+            # 2. Check default user config directory (~/.config/herdr-compose/<filename>)
+            config_dir_file = get_config_dir() / Path(candidate_str).name
+            if config_dir_file.is_file():
+                return config_dir_file
 
         raise ConfigError(
-            f"Configuration file '{user_path}' not found in default config directory ({get_config_dir()}) or specified path."
+            f"Configuration file '{user_path}' (or '{user_path}.yaml') not found in default config directory ({get_config_dir()}) or specified path."
         )
 
     env_path = os.getenv("HERDR_COMPOSE_CONFIG") or os.getenv("HERDR_LAYOUT_CONFIG")

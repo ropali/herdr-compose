@@ -11,6 +11,7 @@ from herdr_compose.config import (
     get_config_dir,
     list_saved_config_files,
     load_config,
+    remove_saved_config_file,
     resolve_config_path,
     save_config_file,
 )
@@ -28,6 +29,7 @@ Declarative workspace layout manager for Herdr terminal workspace manager.
   $ herdr-compose --dry-run layout.yaml       # Preview commands without executing
   $ herdr-compose save layout.yaml            # Save layout into ~/.config/herdr-compose/
   $ herdr-compose list                        # List all saved layout configuration files
+  $ herdr-compose remove layout               # Remove a saved layout configuration file
   $ herdr-compose show layout.yaml            # Inspect visual layout hierarchy tree
     """,
     add_completion=False,
@@ -190,6 +192,43 @@ def list_cmd() -> None:
         typer.echo(f"  {idx}. {styled_name} {ws_str}")
 
 
+@app.command("remove", help="Remove a saved layout configuration file")
+def remove_cmd(
+    filename: Path = typer.Argument(
+        ..., help="Name of saved layout configuration file to remove"
+    ),
+) -> None:
+    """
+    Remove a saved layout configuration file from ~/.config/herdr-compose/.
+
+    [bold]Examples:[/bold]
+      $ herdr-compose remove layout
+      $ herdr-compose remove my-custom-layout.yaml
+    """
+    try:
+        removed_path = remove_saved_config_file(filename)
+        typer.secho(
+            f"✓ Removed saved configuration file: {removed_path.name}",
+            fg=typer.colors.GREEN,
+            bold=True,
+        )
+    except HerdrComposeError as e:
+        typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+
+@app.command("rm", hidden=True)
+def rm_cmd(filename: Path = typer.Argument(...)) -> None:
+    """Alias for remove."""
+    remove_cmd(filename)
+
+
+@app.command("delete", hidden=True)
+def delete_cmd(filename: Path = typer.Argument(...)) -> None:
+    """Alias for remove."""
+    remove_cmd(filename)
+
+
 def _run_apply(
     config_file: Optional[Path], dry_run: bool, verbose: bool, save_flag: bool
 ) -> None:
@@ -242,6 +281,9 @@ def main(argv: list[str] | None = None, standalone_mode: bool = True) -> None:
         "init",
         "save",
         "list",
+        "remove",
+        "rm",
+        "delete",
         "--help",
         "-h",
         "--version",
