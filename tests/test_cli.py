@@ -28,6 +28,27 @@ def test_cli_save_command(tmp_path, capsys, monkeypatch):
     assert saved_file.exists()
 
 
+def test_cli_list_command(tmp_path, capsys, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    # Empty list check
+    main(["list"], standalone_mode=False)
+    captured = capsys.readouterr().out
+    assert "No saved configuration files found" in captured
+
+    # Save a file then list
+    target = tmp_path / "app_layout.yaml"
+    target.write_text("workspaces:\n  - name: app_ws\n", encoding="utf-8")
+    main(["save", str(target)], standalone_mode=False)
+
+    main(["list"], standalone_mode=False)
+    captured_list = capsys.readouterr().out
+    assert "Saved configuration files in" in captured_list
+    assert "app_layout.yaml" in captured_list
+    assert "(1 workspace)" in captured_list
+
+
 def test_cli_validate_command(tmp_path, capsys):
     target = tmp_path / "valid.yaml"
     target.write_text("workspaces:\n  - name: test_ws\n", encoding="utf-8")

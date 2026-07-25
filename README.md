@@ -1,10 +1,10 @@
 # Herdr Compose (`herdr-compose`)
 
-[![CI](https://github.com/ropali/herdr-compose/actions/workflows/ci.yml/badge.svg)](https://github.com/ropali/herdr-compose/actions/workflows/ci.yml)
+[![CI](https://github.com/USERNAME/herdr-compose/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/herdr-compose/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**`herdr-compose`** is a declarative workspace layout manager for [Herdr](https://herdr.dev). 
+**`herdr-compose`** is a declarative workspace layout manager for [Herdr](https://herdr.dev) — the terminal workspace manager for AI coding agents and developers.
 
 It allows you to define complex Herdr workspace configurations (workspaces, tabs, split directions, pane sizes, initial commands, and environment variables) in clean, human-readable YAML files (`herdr-compose.yaml` or `herdrlayout.yaml`).
 
@@ -13,7 +13,7 @@ It allows you to define complex Herdr workspace configurations (workspaces, tabs
 ## 🚀 Key Features
 
 - 📑 **Declarative Workspaces & Tabs**: Define multiple workspaces and tabs in human-readable YAML.
-- 💾 **Save & Install Configs**: Save user layouts directly to `~/.config/herdr-compose/<filename>` with a single command.
+- 💾 **Save & Manage Layouts**: Save your layout files into `~/.config/herdr-compose/` and list them easily with `herdr-compose list`.
 - 🪟 **Explicit Split Directions & Sizes**: Split panes with intuitive directions (`direction: right` / `vertical`) and percentage sizes (`size: 30%` or `size: 0.3`).
 - 🏷️ **Named Pane References**: Name panes (`name: main_editor`) and split directly from them (`from: main_editor`).
 - ⚡ **Shorthand Syntax**: Concise single-line pane definitions (`- nvim`) and workspace-level pane lists.
@@ -29,7 +29,7 @@ You can install `herdr-compose` locally using `uv` or `pip`:
 
 ```bash
 # Using uv (recommended)
-uv pip install -e .
+uv pip install -e ".[dev]"
 
 # Or standard pip
 pip install -e .
@@ -44,15 +44,27 @@ uv tool install --editable .
 
 You can run `herdr-compose` either directly (if installed on PATH) or via `uv run`:
 
-### 1. Save Configuration to `~/.config/herdr-compose/`
-Validate and copy any layout YAML file into your user config directory (preserving the source filename):
+### 1. Save & List Configurations in `~/.config/herdr-compose/`
+Validate and save any layout YAML file to your user config directory, and view all saved files:
 
 ```bash
-# Direct command
+# Save layout to ~/.config/herdr-compose/
 herdr-compose save layout.yaml
-
-# Via uv
+# or
 uv run herdr-compose save layout.yaml
+
+# List all saved configurations in ~/.config/herdr-compose/
+herdr-compose list
+# or
+uv run herdr-compose list
+```
+
+*Sample list output:*
+```
+Saved configuration files in '~/.config/herdr-compose':
+
+  1. layout.yaml (2 workspaces)
+  2. my-backend-stack.yaml (1 workspace)
 ```
 
 ### 2. Apply Layout
@@ -75,27 +87,11 @@ herdr-compose apply layout.yaml --dry-run
 ### 3. Validate Layout Configuration
 ```bash
 herdr-compose validate path/to/herdr-compose.yaml
-# or
-uv run herdr-compose validate path/to/herdr-compose.yaml
 ```
 
 ### 4. Display Layout Hierarchy
 ```bash
 herdr-compose show path/to/herdr-compose.yaml
-# or
-uv run herdr-compose show path/to/herdr-compose.yaml
-```
-
-*Sample output:*
-```
-Layout Summary:
-Workspace 1: backend-api (focused) [root: ~/code/backend-api]
-  ├─ Tab 1: editor
-  │  ├─ Pane 1 [main_editor] [root pane] (focused) -> `nvim`
-  │  ├─ Pane 2 [side_tool] [split right, size 0.3] -> `opencode`
-  │  └─ Pane 3 [bottom_term] [split down, size 0.3] (from main_editor)
-  └─ Tab 2: watch server
-     └─ Pane 1 [root pane] -> `cargo check --watch`
 ```
 
 ### 5. Initialize Starter Configuration
@@ -109,14 +105,9 @@ herdr-compose init
 
 When no file path is specified, `herdr-compose` searches in the following order:
 
-1. CLI argument parameter (`herdr-compose layout.yaml`)
+1. CLI argument parameter (e.g., `herdr-compose path/to/file.yaml`)
 2. `HERDR_COMPOSE_CONFIG` environment variable
-3. `./herdr-compose.yaml`, `./herdrcompose.yaml`, `./herdrlayout.yaml`, or `./layout.yaml` (Current Working Directory)
-4. `~/.config/herdr-compose/herdr-compose.yaml`
-5. `~/.config/herdr-compose/layout.yaml`
-6. `~/.config/herdr-compose/config.yaml`
-7. `~/dotfiles/herdr/.config/herdr/herdrlayout.yaml`
-8. `~/.config/herdr/herdrlayout.yaml`
+3. Default candidate path: `~/.config/herdr-compose/herdr-compose.yaml`
 
 ---
 
@@ -130,34 +121,6 @@ Save your configuration file as `herdr-compose.yaml` or `layout.yaml`.
   - [`examples/full_workspace.yaml`](examples/full_workspace.yaml)
   - [`examples/multi_tab_layout.yaml`](examples/multi_tab_layout.yaml)
 
-### Clean & Explicit Layout Example
-
-```yaml
-workspaces:
-  - name: backend-api
-    root: ~/code/backend-api
-    focus: true
-    env:
-      RUST_LOG: info
-    tabs:
-      - label: dev
-        panes:
-          - name: editor
-            command: nvim
-            focus: true
-
-          - name: sidebar
-            direction: right
-            size: 25%
-            command: opencode
-
-          - name: terminal
-            direction: down
-            size: 30%
-            from: editor
-            command: git status
-```
-
 ---
 
 ## 🧪 Testing
@@ -165,11 +128,11 @@ workspaces:
 Run unit tests using `pytest` or `uv`:
 
 ```bash
-uv run --with pytest pytest
+uv run pytest
 ```
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License.
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.

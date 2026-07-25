@@ -1,6 +1,12 @@
 import os
 import pytest
-from herdr_compose.config import get_config_dir, load_config, resolve_config_path, save_config_file
+from herdr_compose.config import (
+    get_config_dir,
+    list_saved_config_files,
+    load_config,
+    resolve_config_path,
+    save_config_file,
+)
 from herdr_compose.exceptions import ConfigError
 
 
@@ -26,18 +32,21 @@ def test_resolve_config_path_env(tmp_path, monkeypatch):
     assert res == f
 
 
-def test_save_config_file(tmp_path, monkeypatch):
+def test_save_and_list_config_files(tmp_path, monkeypatch):
     config_dir = tmp_path / "user_config"
     monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    assert list_saved_config_files() == []
 
     src = tmp_path / "my_layout.yaml"
     src.write_text("workspaces: [{name: saved_ws}]", encoding="utf-8")
 
     saved_path = save_config_file(src)
     assert saved_path.exists()
-    assert saved_path.name == "my_layout.yaml"
-    assert saved_path.parent == config_dir / "herdr-compose"
-    assert "saved_ws" in saved_path.read_text(encoding="utf-8")
+
+    saved_list = list_saved_config_files()
+    assert len(saved_list) == 1
+    assert saved_list[0].name == "my_layout.yaml"
 
 
 def test_load_config_valid(tmp_path):

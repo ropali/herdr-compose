@@ -24,6 +24,20 @@ def get_config_dir() -> Path:
     return base / "herdr-compose"
 
 
+def list_saved_config_files() -> list[Path]:
+    """List all saved YAML layout configuration files in ~/.config/herdr-compose/."""
+    config_dir = get_config_dir()
+    if not config_dir.is_dir():
+        return []
+
+    files = [
+        p
+        for p in config_dir.iterdir()
+        if p.is_file() and p.suffix.lower() in (".yaml", ".yml")
+    ]
+    return sorted(files, key=lambda p: p.name.lower())
+
+
 def save_config_file(
     source_path: str | Path, target_filename: str | None = None
 ) -> Path:
@@ -54,7 +68,7 @@ def resolve_config_path(
     1. Direct user_path parameter (CLI arg)
     2. HERDR_COMPOSE_CONFIG or HERDR_LAYOUT_CONFIG environment variable
     3. Extra candidate paths if provided
-    4. Default candidate paths
+    4. Default candidate path (~/.config/herdr-compose/herdr-compose.yaml)
     """
     if user_path:
         p = Path(expand_path(str(user_path)))

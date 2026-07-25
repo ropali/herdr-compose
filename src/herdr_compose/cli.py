@@ -7,7 +7,13 @@ from typing import Optional
 import typer
 
 from herdr_compose import __version__
-from herdr_compose.config import load_config, resolve_config_path, save_config_file
+from herdr_compose.config import (
+    get_config_dir,
+    list_saved_config_files,
+    load_config,
+    resolve_config_path,
+    save_config_file,
+)
 from herdr_compose.exceptions import HerdrComposeError
 from herdr_compose.runner import HerdrRunner
 from herdr_compose.utils import generate_starter_template, render_layout_tree
@@ -21,6 +27,7 @@ Declarative workspace layout manager for Herdr terminal workspace manager.
   $ herdr-compose                             # Apply auto-detected layout file
   $ herdr-compose --dry-run layout.yaml       # Preview commands without executing
   $ herdr-compose save layout.yaml            # Save layout into ~/.config/herdr-compose/
+  $ herdr-compose list                        # List all saved layout configuration files
   $ herdr-compose show layout.yaml            # Inspect visual layout hierarchy tree
     """,
     add_completion=False,
@@ -80,7 +87,7 @@ def validate_cmd(
     try:
         path = resolve_config_path(config_file)
         config = load_config(path)
-        typer.echo(f"✓ Configuration file '{path}' is valid.")
+        typer.secho(f"✓ Configuration file '{path}' is valid.", fg=typer.colors.GREEN, bold=True)
         typer.echo(f"  Defined workspaces: {len(config.workspaces)}")
     except HerdrComposeError as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
@@ -126,7 +133,7 @@ def init_cmd(
     """
     try:
         created = generate_starter_template(path)
-        typer.echo(f"Created starter layout config at: {created}")
+        typer.secho(f"Created starter layout config at: {created}", fg=typer.colors.GREEN, bold=True)
     except Exception as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -148,10 +155,39 @@ def save_cmd(
     try:
         path = resolve_config_path(config_file)
         saved_path = save_config_file(path)
-        typer.echo(f"✓ Saved configuration file to: {saved_path}")
+        typer.secho(f"✓ Saved configuration file to: {saved_path}", fg=typer.colors.GREEN, bold=True)
     except HerdrComposeError as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=1)
+
+
+@app.command("list", help="List all saved layout configuration files")
+def list_cmd() -> None:
+    """
+    List all saved layout configuration files stored in ~/.config/herdr-compose/.
+
+    [bold]Examples:[/bold]
+      $ herdr-compose list
+    """
+    config_dir = get_config_dir()
+    saved_files = list_saved_config_files()
+
+    if not saved_files:
+        typer.echo(f"No saved configuration files found in '{config_dir}'")
+        typer.echo("Tip: Run 'herdr-compose save <file.yaml>' to save a layout configuration.")
+        return
+
+    typer.echo(f"Saved configuration files in '{config_dir}':\n")
+    for idx, file_path in enumerate(saved_files, start=1):
+        try:
+            config = load_config(file_path)
+            ws_count = len(config.workspaces)
+            ws_str = f"({ws_count} workspace{'s' if ws_count != 1 else ''})"
+        except Exception:
+            ws_str = "(invalid configuration)"
+
+        styled_name = typer.style(file_path.name, bold=True, fg=typer.colors.CYAN)
+        typer.echo(f"  {idx}. {styled_name} {ws_str}")
 
 
 def _run_apply(
@@ -162,14 +198,14 @@ def _run_apply(
 
         if save_flag:
             saved_path = save_config_file(config_path)
-            typer.echo(f"✓ Saved configuration file to: {saved_path}")
+            typer.secho(f"✓ Saved configuration file to: {saved_path}", fg=typer.colors.GREEN, bold=True)
 
         typer.echo(f"Applying layout from {config_path}...")
         config = load_config(config_path)
 
         runner = HerdrRunner(dry_run=dry_run, verbose=verbose)
         runner.apply_layout(config)
-        typer.echo("Layout created successfully!")
+        typer.secho("Layout created successfully!", fg=typer.colors.GREEN, bold=True)
     except HerdrComposeError as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -205,6 +241,7 @@ def main(argv: list[str] | None = None, standalone_mode: bool = True) -> None:
         "show",
         "init",
         "save",
+        "list",
         "--help",
         "-h",
         "--version",
