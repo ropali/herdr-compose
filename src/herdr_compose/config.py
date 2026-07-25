@@ -42,7 +42,7 @@ def save_config_file(
     source_path: str | Path, target_filename: str | None = None
 ) -> Path:
     """Validate and copy a configuration file to ~/.config/herdr-compose/<filename>."""
-    src = Path(expand_path(str(source_path)))
+    src = resolve_config_path(source_path)
     if not src.is_file():
         raise ConfigError(f"Source config file not found: {source_path}")
 
@@ -64,17 +64,32 @@ def resolve_config_path(
 ) -> Path:
     """Resolve the layout configuration file path.
 
-    Search priority:
-    1. Direct user_path parameter (CLI arg)
-    2. HERDR_COMPOSE_CONFIG or HERDR_LAYOUT_CONFIG environment variable
-    3. Extra candidate paths if provided
-    4. Default candidate path (~/.config/herdr-compose/herdr-compose.yaml)
+    Search priority for explicit user_path:
+    1. Exact path if provided (e.g., ./examples/complex_multi_workspace.yaml)
+    2. Default user config directory: ~/.config/herdr-compose/<filename>
+
+    Search priority when user_path is None:
+    1. HERDR_COMPOSE_CONFIG or HERDR_LAYOUT_CONFIG environment variable
+    2. Extra candidate paths if provided
+    3. Default candidate path (~/.config/herdr-compose/herdr-compose.yaml)
     """
     if user_path:
-        p = Path(expand_path(str(user_path)))
+        raw_str = str(user_path).strip()
+        expanded_str = expand_path(raw_str)
+        p = Path(expanded_str)
+
+        # 1. Exact path check
         if p.is_file():
             return p
-        raise ConfigError(f"Specified configuration file does not exist: {user_path}")
+
+        # 2. Check default user config directory (~/.config/herdr-compose/<filename>)
+        config_dir_file = get_config_dir() / Path(raw_str).name
+        if config_dir_file.is_file():
+            return config_dir_file
+
+        raise ConfigError(
+            f"Configuration file '{user_path}' not found in default config directory ({get_config_dir()}) or specified path."
+        )
 
     env_path = os.getenv("HERDR_COMPOSE_CONFIG") or os.getenv("HERDR_LAYOUT_CONFIG")
     if env_path:

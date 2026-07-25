@@ -19,8 +19,21 @@ def test_resolve_config_path_explicit(tmp_path):
 
 
 def test_resolve_config_path_explicit_nonexistent():
-    with pytest.raises(ConfigError, match="does not exist"):
-        resolve_config_path("/tmp/non_existent_layout_123456.yaml")
+    with pytest.raises(ConfigError, match="not found in default config directory"):
+        resolve_config_path("non_existent_layout_123456.yaml")
+
+
+def test_resolve_config_path_config_dir(tmp_path, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    target_dir = config_dir / "herdr-compose"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    f = target_dir / "my_saved_layout.yaml"
+    f.write_text("workspaces: [{name: saved}]", encoding="utf-8")
+
+    res = resolve_config_path("my_saved_layout.yaml")
+    assert res == f
 
 
 def test_resolve_config_path_env(tmp_path, monkeypatch):

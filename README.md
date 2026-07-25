@@ -14,12 +14,13 @@ It allows you to define complex Herdr workspace configurations (workspaces, tabs
 
 - 📑 **Declarative Workspaces & Tabs**: Define multiple workspaces and tabs in human-readable YAML.
 - 💾 **Save & Manage Layouts**: Save your layout files into `~/.config/herdr-compose/` and list them easily with `herdr-compose list`.
+- 🔍 **Visual Layout Inspection**: Inspect the full workspace/tab/pane hierarchy tree using `herdr-compose show`.
 - 🪟 **Explicit Split Directions & Sizes**: Split panes with intuitive directions (`direction: right` / `vertical`) and percentage sizes (`size: 30%` or `size: 0.3`).
 - 🏷️ **Named Pane References**: Name panes (`name: main_editor`) and split directly from them (`from: main_editor`).
 - ⚡ **Shorthand Syntax**: Concise single-line pane definitions (`- nvim`) and workspace-level pane lists.
 - ⚙️ **Command Auto-Launch**: Automatically run commands in specific panes upon creation (`nvim`, `npm run dev`, `opencode`).
 - 🔑 **Environment Variables**: Pass custom environment variables (`env`) per workspace, tab, or pane.
-- 🔍 **Dry-Run & Inspection**: Preview commands with `--dry-run` or inspect layout structure visually with `herdr-compose show`.
+- 🔍 **Dry-Run Mode**: Preview generated `herdr` CLI execution commands with `herdr-compose apply --dry-run`.
 
 ---
 
@@ -44,57 +45,103 @@ uv tool install --editable .
 
 You can run `herdr-compose` either directly (if installed on PATH) or via `uv run`:
 
-### 1. Save & List Configurations in `~/.config/herdr-compose/`
-Validate and save any layout YAML file to your user config directory, and view all saved files:
+### 1. List Saved Configurations (`list`)
+List all saved configuration files residing in `~/.config/herdr-compose/` along with workspace count metadata:
 
 ```bash
-# Save layout to ~/.config/herdr-compose/
-herdr-compose save layout.yaml
-# or
-uv run herdr-compose save layout.yaml
-
-# List all saved configurations in ~/.config/herdr-compose/
 herdr-compose list
 # or
 uv run herdr-compose list
 ```
 
-*Sample list output:*
+*Sample terminal output:*
 ```
-Saved configuration files in '~/.config/herdr-compose':
+Saved configuration files in '/home/user/.config/herdr-compose':
 
   1. layout.yaml (2 workspaces)
-  2. my-backend-stack.yaml (1 workspace)
+  2. backend-stack.yaml (1 workspace)
 ```
 
-### 2. Apply Layout
+---
+
+### 2. Inspect Layout Hierarchy Tree (`show`)
+Display an ASCII tree visualization of the workspace, tab, and pane hierarchy without executing any terminal commands.
+
+`show` supports flexible path resolution:
+- **Explicit File Path**: `herdr-compose show path/to/my-layout.yaml`
+- **Saved Filename**: `herdr-compose show layout.yaml` (automatically looks in `~/.config/herdr-compose/`)
+- **Default**: `herdr-compose show` (inspects `~/.config/herdr-compose/herdr-compose.yaml`)
+
 ```bash
-# Apply auto-detected layout file
-herdr-compose
+herdr-compose show layout.yaml
 # or
-uv run herdr-compose
+uv run herdr-compose show examples/complex_multi_workspace.yaml
+```
+
+*Sample tree output:*
+```
+Layout loaded from '/home/user/code/herdr-compose/examples/complex_multi_workspace.yaml':
+
+Layout Summary:
+Workspace 1: backend-api (focused) [root: ~/code/backend-api]
+  ├─ Tab 1: editor
+  │  ├─ Pane 1 [main_editor] [root pane] (focused) -> `nvim`
+  │  ├─ Pane 2 [side_tool] [split right, size 0.3] -> `opencode`
+  │  └─ Pane 3 [bottom_term] [split down, size 0.3] (from main_editor)
+  └─ Tab 2: watch server
+     └─ Pane 1 [root pane] -> `cargo check --watch`
+Workspace 2: docs-server [root: ~/code/docs-server]
+  ├─ Tab 1: editor
+  │  ├─ Pane 1 [main_editor] [root pane] (focused) -> `nvim`
+  │  ├─ Pane 2 [side_tool] [split right, size 0.3] -> `opencode`
+  │  └─ Pane 3 [bottom_term] [split down, size 0.3] (from main_editor)
+  └─ Tab 2: watch server
+     └─ Pane 1 [root pane] -> `mdbook serve --open`
+```
+
+---
+
+### 3. Save Configuration (`save`)
+Validate and save any user layout file to your `~/.config/herdr-compose/` user directory:
+
+```bash
+# Saves to ~/.config/herdr-compose/layout.yaml
+herdr-compose save layout.yaml
+
+# Save and apply simultaneously
+herdr-compose apply layout.yaml --save
+```
+
+---
+
+### 4. Apply Layout (`apply`)
+Create workspaces, tabs, panes, and run configured commands:
+
+```bash
+# Apply default layout (~/.config/herdr-compose/herdr-compose.yaml)
+herdr-compose
 
 # Apply specific layout file
 herdr-compose apply path/to/herdr-compose.yaml
 
-# Save to ~/.config/herdr-compose/ AND apply simultaneously
-herdr-compose apply path/to/my-layout.yaml --save
-
-# Perform a dry-run (preview herdr CLI commands without executing)
+# Perform a dry-run (preview generated herdr commands without executing)
 herdr-compose apply layout.yaml --dry-run
 ```
 
-### 3. Validate Layout Configuration
+---
+
+### 5. Validate Configuration (`validate`)
+Check if a layout YAML file is valid:
+
 ```bash
 herdr-compose validate path/to/herdr-compose.yaml
 ```
 
-### 4. Display Layout Hierarchy
-```bash
-herdr-compose show path/to/herdr-compose.yaml
-```
+---
 
-### 5. Initialize Starter Configuration
+### 6. Initialize Starter Configuration (`init`)
+Generate a starter `herdr-compose.yaml` file:
+
 ```bash
 herdr-compose init
 ```
@@ -105,9 +152,9 @@ herdr-compose init
 
 When no file path is specified, `herdr-compose` searches in the following order:
 
-1. CLI argument parameter (e.g., `herdr-compose path/to/file.yaml`)
-2. `HERDR_COMPOSE_CONFIG` environment variable
-3. Default candidate path: `~/.config/herdr-compose/herdr-compose.yaml`
+1. **CLI argument parameter** (e.g., `herdr-compose apply path/to/file.yaml`)
+2. **`HERDR_COMPOSE_CONFIG` environment variable**
+3. **Default candidate path**: `~/.config/herdr-compose/herdr-compose.yaml`
 
 ---
 
