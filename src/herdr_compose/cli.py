@@ -8,12 +8,14 @@ import typer
 
 from herdr_compose import __version__
 from herdr_compose.config import (
+    get_active_config_name,
     get_config_dir,
     list_saved_config_files,
     load_config,
     remove_saved_config_file,
     resolve_config_path,
     save_config_file,
+    set_active_config,
 )
 from herdr_compose.exceptions import HerdrComposeError
 from herdr_compose.models import expand_path
@@ -26,11 +28,10 @@ app = typer.Typer(
 Declarative workspace layout manager for Herdr terminal workspace manager.
 
 [bold]Examples:[/bold]
-  $ herdr-compose                             # Apply auto-detected layout file
-  $ herdr-compose --dry-run layout.yaml       # Preview commands without executing
-  $ herdr-compose init                        # Generate starter template in ~/.config/herdr-compose/
+  $ herdr-compose                             # Apply active default layout file
+  $ herdr-compose use backend                 # Set active default layout configuration
+  $ herdr-compose list                        # List saved layout files & see active default
   $ herdr-compose save layout.yaml            # Save layout into ~/.config/herdr-compose/
-  $ herdr-compose list                        # List all saved layout configuration files
   $ herdr-compose remove layout               # Remove a saved layout configuration file
   $ herdr-compose show layout.yaml            # Inspect visual layout hierarchy tree
     """,
@@ -49,7 +50,7 @@ def version_callback(value: bool) -> None:
 @app.command("apply", help="Apply a layout configuration file")
 def apply_cmd(
     config_file: Optional[Path] = typer.Argument(
-        None, help="Path to layout YAML file (defaults to standard search paths)"
+        None, help="Path to layout YAML file (defaults to standard search paths / active default)"
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Print herdr commands without executing them"
@@ -122,6 +123,43 @@ def show_cmd(
         raise typer.Exit(code=1)
 
 
+@app.command("use", help="Set the active default layout configuration file")
+def use_cmd(
+    filename: Path = typer.Argument(
+        ..., help="Name of layout configuration file to set as active default"
+    ),
+) -> None:
+    """
+    Set the active default layout configuration file in ~/.config/herdr-compose/.
+
+    [bold]Examples:[/bold]
+      $ herdr-compose use backend
+      $ herdr-compose use my-layout.yaml
+    """
+    try:
+        active_path = set_active_config(filename)
+        typer.secho(
+            f"✓ Active default layout configuration set to: {active_path.name}",
+            fg=typer.colors.GREEN,
+            bold=True,
+        )
+    except HerdrComposeError as e:
+        typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+
+@app.command("select", hidden=True)
+def select_cmd(filename: Path = typer.Argument(...)) -> None:
+    """Alias for use."""
+    use_cmd(filename)
+
+
+@app.command("set-default", hidden=True)
+def set_default_cmd(filename: Path = typer.Argument(...)) -> None:
+    """Alias for use."""
+    use_cmd(filename)
+
+
 @app.command("init", help="Generate a starter layout configuration file in ~/.config/herdr-compose/")
 def init_cmd(
     filename: Optional[Path] = typer.Argument(
@@ -129,6 +167,9 @@ def init_cmd(
     ),
     overwrite: bool = typer.Option(
         False, "--overwrite", "-f", help="Overwrite existing configuration file if it exists"
+    ),
+    set_active: bool = typer.Option(
+        True, "--active/--no-active", help="Set the newly created template as active default"
     ),
 ) -> None:
     """
@@ -158,6 +199,12 @@ def init_cmd(
             fg=typer.colors.GREEN,
             bold=True,
         )
+        if set_active and created_abs.parent == get_config_dir():
+            set_active_config(created_abs.name)
+            typer.secho(
+                f"✓ Set active default layout configuration to: {created_abs.name}",
+                fg=typer.colors.GREEN,
+            )
     except FileExistsError as e:
         typer.secho(f"Notice: {e}", fg=typer.colors.YELLOW, bold=True)
     except Exception as e:
@@ -170,18 +217,28 @@ def save_cmd(
     config_file: Optional[Path] = typer.Argument(
         None, help="Path to layout YAML file to save into ~/.config/herdr-compose/"
     ),
+    set_active: bool = typer.Option(
+        False, "--use", "-u", "--active", help="Set as active default layout configuration upon saving"
+    ),
 ) -> None:
     """
     Validate and copy a layout YAML file into ~/.config/herdr-compose/<filename>.
 
     [bold]Examples:[/bold]
       $ herdr-compose save layout.yaml
-      $ herdr-compose save my-custom-layout.yaml
+      $ herdr-compose save my-custom-layout.yaml --use
     """
     try:
         path = resolve_config_path(config_file)
         saved_path = save_config_file(path)
         typer.secho(f"✓ Saved configuration file to: {saved_path}", fg=typer.colors.GREEN, bold=True)
+
+        if set_active:
+            set_active_config(saved_path.name)
+            typer.secho(
+                f"✓ Set active default layout configuration to: {saved_path.name}",
+                fg=typer.colors.GREEN,
+            )
     except HerdrComposeError as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=1)
@@ -200,9 +257,10 @@ def list_cmd() -> None:
 
     if not saved_files:
         typer.echo(f"No saved configuration files found in '{config_dir}'")
-        typer.echo("Tip: Run 'herdr-compose save <file.yaml>' to save a layout configuration.")
+        typer.echo("Tip: Run 'herdr-compose init' or 'herdr-compose save <file.yaml>' to save a layout configuration.")
         return
 
+    active_name = get_active_config_name()
     typer.echo(f"Saved configuration files in '{config_dir}':\n")
     for idx, file_path in enumerate(saved_files, start=1):
         try:
@@ -212,8 +270,11 @@ def list_cmd() -> None:
         except Exception:
             ws_str = "(invalid configuration)"
 
+        is_active = active_name and (file_path.name == active_name)
         styled_name = typer.style(file_path.name, bold=True, fg=typer.colors.CYAN)
-        typer.echo(f"  {idx}. {styled_name} {ws_str}")
+        active_tag = typer.style(" ★ [active default]", fg=typer.colors.YELLOW, bold=True) if is_active else ""
+
+        typer.echo(f"  {idx}. {styled_name} {ws_str}{active_tag}")
 
 
 @app.command("remove", help="Remove a saved layout configuration file")
@@ -304,6 +365,9 @@ def main(argv: list[str] | None = None, standalone_mode: bool = True) -> None:
         "show",
         "init",
         "save",
+        "use",
+        "select",
+        "set-default",
         "list",
         "remove",
         "rm",

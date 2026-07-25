@@ -24,6 +24,30 @@ def get_config_dir() -> Path:
     return base / "herdr-compose"
 
 
+def get_active_config_pointer_file() -> Path:
+    """Return path to active config pointer file (~/.config/herdr-compose/.active)."""
+    return get_config_dir() / ".active"
+
+
+def set_active_config(filename: str | Path) -> Path:
+    """Set the active default layout configuration file."""
+    resolved_path = resolve_config_path(filename)
+    pointer_file = get_active_config_pointer_file()
+    pointer_file.parent.mkdir(parents=True, exist_ok=True)
+    pointer_file.write_text(resolved_path.name, encoding="utf-8")
+    return resolved_path
+
+
+def get_active_config_name() -> str | None:
+    """Get the name of the currently active default config file, if set and valid."""
+    pointer_file = get_active_config_pointer_file()
+    if pointer_file.is_file():
+        name = pointer_file.read_text(encoding="utf-8").strip()
+        if name and (get_config_dir() / name).is_file():
+            return name
+    return None
+
+
 def list_saved_config_files() -> list[Path]:
     """List all saved YAML layout configuration files in ~/.config/herdr-compose/."""
     config_dir = get_config_dir()
@@ -58,6 +82,11 @@ def save_config_file(
 
     dest = config_dir / filename
     dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # If no active config is set yet, make this newly saved file the active default
+    if get_active_config_name() is None:
+        set_active_config(dest.name)
+
     return dest
 
 
@@ -77,6 +106,14 @@ def remove_saved_config_file(filename: str | Path) -> Path:
         target_path = config_dir / target_name
         if target_path.is_file():
             target_path.unlink()
+
+            # Clear active pointer if deleted file was active
+            active_name = get_active_config_name()
+            if active_name and active_name == target_name:
+                pointer_file = get_active_config_pointer_file()
+                if pointer_file.is_file():
+                    pointer_file.unlink()
+
             return target_path
 
     raise ConfigError(
@@ -96,8 +133,9 @@ def resolve_config_path(
 
     Search priority when user_path is None:
     1. HERDR_COMPOSE_CONFIG or HERDR_LAYOUT_CONFIG environment variable
-    2. Extra candidate paths if provided
-    3. Default candidate path (~/.config/herdr-compose/herdr-compose.yaml)
+    2. Active default setting (~/.config/herdr-compose/.active)
+    3. Extra candidate paths if provided
+    4. Default candidate path (~/.config/herdr-compose/herdr-compose.yaml)
     """
     if user_path:
         raw_str = str(user_path).strip()
@@ -133,6 +171,12 @@ def resolve_config_path(
         raise ConfigError(
             f"Configuration file specified in environment variable does not exist: {env_path}"
         )
+
+    active_name = get_active_config_name()
+    if active_name:
+        active_file = get_config_dir() / active_name
+        if active_file.is_file():
+            return active_file
 
     candidates = list(extra_candidates or []) + DEFAULT_CANDIDATE_PATHS
     for cand in candidates:

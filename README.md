@@ -13,6 +13,7 @@ It allows you to define complex Herdr workspace configurations (workspaces, tabs
 ## 🚀 Key Features
 
 - 📑 **Declarative Workspaces & Tabs**: Define multiple workspaces and tabs in human-readable YAML.
+- ⭐ **Active Default Layout Selection**: Set your active default configuration with `herdr-compose use <name>`, allowing seamless default execution without typing file paths every time.
 - 💾 **Save & Manage Layouts**: Save your layout files into `~/.config/herdr-compose/`, list them with `herdr-compose list`, or remove them with `herdr-compose remove`.
 - ⚙️ **Starter Template Initialization**: Instantly generate starter configuration files in `~/.config/herdr-compose/` with `herdr-compose init`.
 - 🔍 **Visual Layout Inspection**: Inspect the full workspace/tab/pane hierarchy tree using `herdr-compose show`.
@@ -46,23 +47,18 @@ uv tool install --editable .
 
 You can run `herdr-compose` either directly (if installed on PATH) or via `uv run`:
 
-### 1. Initialize Starter Configuration (`init`)
-Generate a starter configuration file directly inside `~/.config/herdr-compose/` and print its full absolute file path:
+### 1. Set Active Default Layout (`use`)
+Set the active default layout configuration file. When running `herdr-compose` without arguments, it automatically executes your active default layout:
 
 ```bash
-# Generates ~/.config/herdr-compose/herdr-compose.yaml
-herdr-compose init
+# Set active default configuration (extension optional)
+herdr-compose use backend
+# or
+herdr-compose use frontend.yaml
 
-# Generates ~/.config/herdr-compose/my-custom-layout.yaml
-herdr-compose init my-custom-layout
-
-# Generates explicit local path ./local-layout.yaml
-herdr-compose init ./local-layout.yaml
-```
-
-*Sample terminal output:*
-```
-✓ Created starter layout config at: /home/user/.config/herdr-compose/herdr-compose.yaml
+# Aliases
+herdr-compose select backend
+herdr-compose set-default backend
 ```
 
 ---
@@ -73,7 +69,7 @@ herdr-compose init ./local-layout.yaml
 # Save layout to ~/.config/herdr-compose/
 herdr-compose save layout.yaml
 
-# List all saved configurations in ~/.config/herdr-compose/
+# List all saved configurations (shows active default with ★ tag)
 herdr-compose list
 
 # Remove a saved layout configuration file (extension optional)
@@ -83,20 +79,29 @@ herdr-compose rm layout
 herdr-compose delete layout.yaml
 ```
 
+*Sample list output:*
+```
+Saved configuration files in '/home/user/.config/herdr-compose':
+
+  1. backend.yaml (1 workspace) ★ [active default]
+  2. frontend.yaml (2 workspaces)
+  3. layout.yaml (2 workspaces)
+```
+
 ---
 
 ### 3. Inspect Layout Hierarchy Tree (`show`)
 Display an ASCII tree visualization of the workspace, tab, and pane hierarchy without executing any terminal commands.
 
-`show` supports extension-agnostic path resolution:
-- **Saved Filename**: `herdr-compose show layout` (automatically finds `~/.config/herdr-compose/layout.yaml`)
-- **Explicit File Path**: `herdr-compose show path/to/my-layout.yaml`
-- **Default**: `herdr-compose show` (inspects `~/.config/herdr-compose/herdr-compose.yaml`)
-
 ```bash
-herdr-compose show layout
-# or
-uv run herdr-compose show examples/complex_multi_workspace.yaml
+# Inspect active default layout
+herdr-compose show
+
+# Inspect specific saved layout (extension optional)
+herdr-compose show backend
+
+# Inspect explicit file path
+herdr-compose show examples/complex_multi_workspace.yaml
 ```
 
 ---
@@ -105,26 +110,30 @@ uv run herdr-compose show examples/complex_multi_workspace.yaml
 Create workspaces, tabs, panes, and run configured commands:
 
 ```bash
-# Apply default layout (~/.config/herdr-compose/herdr-compose.yaml)
+# Apply active default layout (~/.config/herdr-compose/.active)
 herdr-compose
 
 # Apply specific layout file (extension optional)
-herdr-compose apply layout
+herdr-compose apply backend
 
-# Save to ~/.config/herdr-compose/ AND apply simultaneously
-herdr-compose apply path/to/my-layout.yaml --save
+# Save to ~/.config/herdr-compose/ AND set as active default simultaneously
+herdr-compose save my-layout.yaml --use
 
 # Perform a dry-run (preview generated herdr commands without executing)
-herdr-compose apply layout.yaml --dry-run
+herdr-compose apply --dry-run
 ```
 
 ---
 
-### 5. Validate Configuration (`validate`)
-Check if a layout YAML file is valid:
+### 5. Initialize Starter Configuration (`init`)
+Generate a starter configuration file directly inside `~/.config/herdr-compose/`:
 
 ```bash
-herdr-compose validate path/to/herdr-compose.yaml
+# Generates ~/.config/herdr-compose/herdr-compose.yaml & sets as active default
+herdr-compose init
+
+# Generates ~/.config/herdr-compose/my-custom-layout.yaml
+herdr-compose init my-custom-layout
 ```
 
 ---
@@ -133,9 +142,10 @@ herdr-compose validate path/to/herdr-compose.yaml
 
 When no file path is specified, `herdr-compose` searches in the following order:
 
-1. **CLI argument parameter** (e.g., `herdr-compose apply path/to/file.yaml` or `herdr-compose apply file`)
+1. **CLI argument parameter** (e.g., `herdr-compose apply backend` or `herdr-compose apply path/to/file.yaml`)
 2. **`HERDR_COMPOSE_CONFIG` environment variable**
-3. **Default candidate path**: `~/.config/herdr-compose/herdr-compose.yaml`
+3. **Active default configuration** (`~/.config/herdr-compose/.active`)
+4. **Default candidate path**: `~/.config/herdr-compose/herdr-compose.yaml`
 
 ---
 

@@ -26,6 +26,24 @@ def test_cli_init_command_custom(tmp_path, capsys):
     assert "workspaces:" in target.read_text(encoding="utf-8")
 
 
+def test_cli_use_command(tmp_path, capsys, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    target = tmp_path / "backend.yaml"
+    target.write_text("workspaces:\n  - name: backend_ws\n", encoding="utf-8")
+
+    main(["save", str(target)], standalone_mode=False)
+    main(["use", "backend"], standalone_mode=False)
+
+    captured = capsys.readouterr().out
+    assert "Active default layout configuration set to: backend.yaml" in captured
+
+    main(["list"], standalone_mode=False)
+    captured_list = capsys.readouterr().out
+    assert "★ [active default]" in captured_list
+
+
 def test_cli_save_command(tmp_path, capsys, monkeypatch):
     config_dir = tmp_path / "user_config"
     monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
