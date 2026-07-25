@@ -1,6 +1,7 @@
 # Herdr Compose (`herdr-compose`)
 
-[![CI](https://github.com/USERNAME/herdr-compose/actions/workflows/ci.yml/badge.svg)](https://github.com/ropali/herdr-compose/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/herdr-compose.svg)](https://pypi.org/project/herdr-compose/)
+[![CI](https://github.com/ropali/herdr-compose/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ropali/herdr-compose/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -28,24 +29,39 @@ It allows you to define complex Herdr workspace configurations (workspaces, tabs
 
 ## 📦 Installation
 
-You can install `herdr-compose` locally using `uv` or `pip`:
+### From PyPI (Recommended)
+
+Install `herdr-compose` globally as a CLI tool using `uv` or `pip`:
 
 ```bash
-# Using uv (recommended)
+# Install globally as a tool using uv (recommended)
+uv tool install herdr-compose
+
+# Or standard pip installation
+pip install herdr-compose
+```
+
+### Local / Development Setup
+
+To install `herdr-compose` from source for local development:
+
+```bash
+# Clone the repository
+git clone https://github.com/USERNAME/herdr-compose.git
+cd herdr-compose
+
+# Install editable package with dev dependencies using uv
 uv pip install -e ".[dev]"
 
 # Or standard pip
-pip install -e .
-
-# Or install globally as a tool with uv
-uv tool install --editable .
+pip install -e ".[dev]"
 ```
 
 ---
 
 ## 🛠️ Usage & Commands
 
-You can run `herdr-compose` either directly (if installed on PATH) or via `uv run`:
+You can run `herdr-compose` directly:
 
 ### 1. Set Active Default Layout (`use`)
 Set the active default layout configuration file. When running `herdr-compose` without arguments, it automatically executes your active default layout:
