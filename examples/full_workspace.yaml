@@ -1,0 +1,32 @@
+# Complete example workspace configuration for Herdr layout manager
+
+workspaces:
+  - name: my-backend
+    root: ~/code/my-backend
+    focus: true
+    env:
+      LOG_LEVEL: debug
+      PORT: "8080"
+    tabs:
+      - label: editor
+        cwd: ~/code/my-backend
+        panes:
+          - name: editor
+            command: nvim
+            focus: true
+
+          - name: watcher
+            direction: right
+            size: 25%
+            command: npm run watch
+
+          - name: status
+            direction: down
+            size: 40%
+            from: editor
+            command: git status
+
+      - label: database
+        cwd: ~/code/my-backend/db
+        panes:
+          - command: psql -U postgres -d app_db

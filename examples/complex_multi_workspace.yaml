@@ -1,0 +1,63 @@
+# Complex Multi-Workspace Layout Example for Herdr Layout Manager
+# Learn more about Herdr at https://herdr.dev
+
+workspaces:
+  # Workspace 1: Primary backend API service with editor, AI sidecar, bottom terminal, and server tab
+  - name: backend-api
+    root: ~/code/backend-api
+    focus: true
+    env:
+      RUST_LOG: debug
+      PORT: "8080"
+
+    tabs:
+      - label: editor
+        panes:
+          # Root Pane 1 (Primary Editor)
+          - name: main_editor
+            command: nvim
+            focus: true
+
+          # Pane 2: Right coding agent tool taking 30% width
+          - name: opencode
+            direction: right
+            size: 30%
+            command: opencode
+
+          # Pane 3: Bottom terminal split taking 30% height from main_editor
+          - name: bottom_term
+            direction: down
+            size: 30%
+            from: main_editor
+
+      - label: watch server
+        panes:
+          - cwd: ~/code/backend-api
+            command: cargo check --watch
+
+  # Workspace 2: Documentation & API server project
+  - name: docs-server
+    root: ~/code/docs-server
+    focus: false
+
+    tabs:
+      - label: editor
+        panes:
+          - name: main_editor
+            command: nvim
+            focus: true
+
+          - name: side_tool
+            direction: right
+            size: 30%
+            command: opencode
+
+          - name: bottom_term
+            direction: down
+            size: 30%
+            from: main_editor
+
+      - label: watch server
+        panes:
+          - cwd: ~/code/docs-server
+            command: mdbook serve --open

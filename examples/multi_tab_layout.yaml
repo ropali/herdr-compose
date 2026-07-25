@@ -1,0 +1,21 @@
+# Multi-workspace, multi-tab layout example
+
+workspaces:
+  - name: frontend-app
+    root: ~/code/frontend-app
+    focus: true
+    tabs:
+      - label: dev
+        panes:
+          - command: npm run dev
+            focus: true
+          - direction: right
+            size: 50%
+            command: npm test -- --watch
+
+  - name: docs-site
+    root: ~/code/docs-site
+    tabs:
+      - label: preview
+        panes:
+          - command: mdbook serve --open
