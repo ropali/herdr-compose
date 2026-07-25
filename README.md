@@ -14,6 +14,7 @@ It allows you to define complex Herdr workspace configurations (workspaces, tabs
 
 - 📑 **Declarative Workspaces & Tabs**: Define multiple workspaces and tabs in human-readable YAML.
 - 💾 **Save & Manage Layouts**: Save your layout files into `~/.config/herdr-compose/`, list them with `herdr-compose list`, or remove them with `herdr-compose remove`.
+- ⚙️ **Starter Template Initialization**: Instantly generate starter configuration files in `~/.config/herdr-compose/` with `herdr-compose init`.
 - 🔍 **Visual Layout Inspection**: Inspect the full workspace/tab/pane hierarchy tree using `herdr-compose show`.
 - 🪟 **Explicit Split Directions & Sizes**: Split panes with intuitive directions (`direction: right` / `vertical`) and percentage sizes (`size: 30%` or `size: 0.3`).
 - 🏷️ **Named Pane References**: Name panes (`name: main_editor`) and split directly from them (`from: main_editor`).
@@ -45,7 +46,28 @@ uv tool install --editable .
 
 You can run `herdr-compose` either directly (if installed on PATH) or via `uv run`:
 
-### 1. Save, List & Remove Configurations in `~/.config/herdr-compose/`
+### 1. Initialize Starter Configuration (`init`)
+Generate a starter configuration file directly inside `~/.config/herdr-compose/` and print its full absolute file path:
+
+```bash
+# Generates ~/.config/herdr-compose/herdr-compose.yaml
+herdr-compose init
+
+# Generates ~/.config/herdr-compose/my-custom-layout.yaml
+herdr-compose init my-custom-layout
+
+# Generates explicit local path ./local-layout.yaml
+herdr-compose init ./local-layout.yaml
+```
+
+*Sample terminal output:*
+```
+✓ Created starter layout config at: /home/user/.config/herdr-compose/herdr-compose.yaml
+```
+
+---
+
+### 2. Save, List & Remove Configurations in `~/.config/herdr-compose/`
 
 ```bash
 # Save layout to ~/.config/herdr-compose/
@@ -61,20 +83,12 @@ herdr-compose rm layout
 herdr-compose delete layout.yaml
 ```
 
-*Sample list output:*
-```
-Saved configuration files in '/home/user/.config/herdr-compose':
-
-  1. layout.yaml (2 workspaces)
-  2. backend-stack.yaml (1 workspace)
-```
-
 ---
 
-### 2. Inspect Layout Hierarchy Tree (`show`)
+### 3. Inspect Layout Hierarchy Tree (`show`)
 Display an ASCII tree visualization of the workspace, tab, and pane hierarchy without executing any terminal commands.
 
-`show` supports flexible extension-agnostic path resolution:
+`show` supports extension-agnostic path resolution:
 - **Saved Filename**: `herdr-compose show layout` (automatically finds `~/.config/herdr-compose/layout.yaml`)
 - **Explicit File Path**: `herdr-compose show path/to/my-layout.yaml`
 - **Default**: `herdr-compose show` (inspects `~/.config/herdr-compose/herdr-compose.yaml`)
@@ -87,7 +101,7 @@ uv run herdr-compose show examples/complex_multi_workspace.yaml
 
 ---
 
-### 3. Apply Layout (`apply`)
+### 4. Apply Layout (`apply`)
 Create workspaces, tabs, panes, and run configured commands:
 
 ```bash
@@ -106,20 +120,11 @@ herdr-compose apply layout.yaml --dry-run
 
 ---
 
-### 4. Validate Configuration (`validate`)
+### 5. Validate Configuration (`validate`)
 Check if a layout YAML file is valid:
 
 ```bash
 herdr-compose validate path/to/herdr-compose.yaml
-```
-
----
-
-### 5. Initialize Starter Configuration (`init`)
-Generate a starter `herdr-compose.yaml` file:
-
-```bash
-herdr-compose init
 ```
 
 ---

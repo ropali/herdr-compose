@@ -16,6 +16,7 @@ from herdr_compose.config import (
     save_config_file,
 )
 from herdr_compose.exceptions import HerdrComposeError
+from herdr_compose.models import expand_path
 from herdr_compose.runner import HerdrRunner
 from herdr_compose.utils import generate_starter_template, render_layout_tree
 
@@ -27,6 +28,7 @@ Declarative workspace layout manager for Herdr terminal workspace manager.
 [bold]Examples:[/bold]
   $ herdr-compose                             # Apply auto-detected layout file
   $ herdr-compose --dry-run layout.yaml       # Preview commands without executing
+  $ herdr-compose init                        # Generate starter template in ~/.config/herdr-compose/
   $ herdr-compose save layout.yaml            # Save layout into ~/.config/herdr-compose/
   $ herdr-compose list                        # List all saved layout configuration files
   $ herdr-compose remove layout               # Remove a saved layout configuration file
@@ -120,22 +122,44 @@ def show_cmd(
         raise typer.Exit(code=1)
 
 
-@app.command("init", help="Generate a starter herdr-compose.yaml configuration file")
+@app.command("init", help="Generate a starter layout configuration file in ~/.config/herdr-compose/")
 def init_cmd(
-    path: Path = typer.Argument(
-        Path("herdr-compose.yaml"), help="Target output path (default: herdr-compose.yaml)"
+    filename: Optional[Path] = typer.Argument(
+        None, help="Target configuration filename or path (defaults to ~/.config/herdr-compose/herdr-compose.yaml)"
+    ),
+    overwrite: bool = typer.Option(
+        False, "--overwrite", "-f", help="Overwrite existing configuration file if it exists"
     ),
 ) -> None:
     """
-    Generate a starter herdr-compose.yaml configuration file.
+    Generate a starter herdr-compose.yaml configuration file in ~/.config/herdr-compose/.
 
     [bold]Examples:[/bold]
-      $ herdr-compose init
-      $ herdr-compose init my-starter-layout.yaml
+      $ herdr-compose init                          # Creates ~/.config/herdr-compose/herdr-compose.yaml
+      $ herdr-compose init my-custom-layout         # Creates ~/.config/herdr-compose/my-custom-layout.yaml
+      $ herdr-compose init ./local-layout.yaml      # Creates ./local-layout.yaml
     """
     try:
-        created = generate_starter_template(path)
-        typer.secho(f"Created starter layout config at: {created}", fg=typer.colors.GREEN, bold=True)
+        if filename is None:
+            target_path = get_config_dir() / "herdr-compose.yaml"
+        else:
+            raw_str = str(filename).strip()
+            if not raw_str.endswith((".yaml", ".yml")):
+                raw_str += ".yaml"
+            p = Path(expand_path(raw_str))
+            if p.is_absolute() or "/" in raw_str or "\\" in raw_str:
+                target_path = p
+            else:
+                target_path = get_config_dir() / raw_str
+
+        created_abs = generate_starter_template(target_path, overwrite=overwrite)
+        typer.secho(
+            f"✓ Created starter layout config at: {created_abs}",
+            fg=typer.colors.GREEN,
+            bold=True,
+        )
+    except FileExistsError as e:
+        typer.secho(f"Notice: {e}", fg=typer.colors.YELLOW, bold=True)
     except Exception as e:
         typer.secho(f"Error: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=1)

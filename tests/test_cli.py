@@ -3,12 +3,25 @@ import pytest
 from herdr_compose.cli import main
 
 
-def test_cli_init_command(tmp_path, capsys):
+def test_cli_init_command_default(tmp_path, capsys, monkeypatch):
+    config_dir = tmp_path / "user_config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(config_dir))
+
+    main(["init"], standalone_mode=False)
+
+    captured = capsys.readouterr().out
+    target = config_dir / "herdr-compose" / "herdr-compose.yaml"
+    assert f"Created starter layout config at: {target.resolve()}" in captured
+    assert target.exists()
+    assert "workspaces:" in target.read_text(encoding="utf-8")
+
+
+def test_cli_init_command_custom(tmp_path, capsys):
     target = tmp_path / "test_init_layout.yaml"
     main(["init", str(target)], standalone_mode=False)
 
     captured = capsys.readouterr().out
-    assert "Created starter layout config at" in captured
+    assert f"Created starter layout config at: {target.resolve()}" in captured
     assert target.exists()
     assert "workspaces:" in target.read_text(encoding="utf-8")
 

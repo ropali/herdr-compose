@@ -35,14 +35,15 @@ workspaces:
 """
 
 
-def generate_starter_template(target_path: Path) -> Path:
-    """Generate a starter herdr-compose.yaml template file."""
-    if target_path.exists():
-        raise FileExistsError(f"Target template file already exists: {target_path}")
+def generate_starter_template(target_path: Path, overwrite: bool = False) -> Path:
+    """Generate a starter herdr-compose.yaml template file and return its absolute path."""
+    abs_path = target_path.resolve()
+    if abs_path.exists() and not overwrite:
+        raise FileExistsError(f"Target template file already exists: {abs_path}")
 
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_text(DEFAULT_STARTER_TEMPLATE, encoding="utf-8")
-    return target_path
+    abs_path.parent.mkdir(parents=True, exist_ok=True)
+    abs_path.write_text(DEFAULT_STARTER_TEMPLATE, encoding="utf-8")
+    return abs_path
 
 
 def render_layout_tree(config: LayoutConfig) -> str:
