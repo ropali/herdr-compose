@@ -3,6 +3,7 @@
 import json
 import shutil
 import subprocess
+import time
 from typing import Any
 
 from herdr_compose.exceptions import HerdrCmdError, HerdrNotInstalledError
@@ -206,6 +207,72 @@ class HerdrRunner:
                 )
 
         if pane.command:
+            self._wait_for_pane_ready(current_pane_id)
             self.run_cmd(["pane", "run", current_pane_id, pane.command])
 
         return current_pane_id
+
+    def _wait_for_pane_ready(self, pane_id: str, timeout: float = 5.0) -> None:
+        """Wait until the pane's shell is interactive and ready to receive commands."""
+        if self.dry_run:
+            return
+
+        if self.verbose:
+            print(f"[WAIT] Waiting for pane {pane_id} shell to be ready...")
+
+        # 1. Wait for initial terminal output to appear (shell starting up)
+        try:
+            subprocess.run(
+                [
+                    "herdr",
+                    "pane",
+                    "wait-output",
+                    pane_id,
+                    "--regex",
+                    ".+",
+                    "--timeout",
+                    "2000",
+                ],
+                capture_output=True,
+            )
+        except Exception:
+            pass
+
+        # 2. Poll until foreground processes settle to just the shell
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                res = subprocess.run(
+                    ["herdr", "pane", "process-info", "--pane", pane_id],
+                    capture_output=True,
+                    text=True,
+                )
+                if res.returncode == 0:
+                    data = (
+                        json.loads(res.stdout)
+                        .get("result", {})
+                        .get("process_info", {})
+                    )
+                    shell_pid = data.get("shell_pid")
+                    fg_processes = data.get("foreground_processes", [])
+                    fg_pids = [
+                        p.get("pid")
+                        for p in fg_processes
+                        if p.get("pid") is not None
+                    ]
+
+                    if shell_pid and fg_pids == [shell_pid]:
+                        # Small grace period for line editor (zle/readline) to enter input loop
+                        time.sleep(0.1)
+                        return
+                elif res.returncode == 2:
+                    # Subcommand not supported in this herdr version, fallback to small sleep
+                    time.sleep(0.3)
+                    return
+            except Exception:
+                pass
+            time.sleep(0.05)
+
+        # Fallback delay if timeout was reached
+        time.sleep(0.2)
+

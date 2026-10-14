@@ -70,3 +70,55 @@ def test_pane_level_cwd_resolution(capsys):
     assert "[DRY-RUN] herdr workspace create --label docsMCP --cwd /home/user/docsmcp --no-focus" in captured
     assert "[DRY-RUN] herdr tab create --workspace w1 --cwd /home/user/crabbase --label watch server" in captured
     assert "[DRY-RUN] herdr pane run w1:t2:p1 make watch" in captured
+
+
+def test_wait_for_pane_ready_dry_run(monkeypatch):
+    import subprocess
+    runner = HerdrRunner(dry_run=True)
+    called = []
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: called.append(args))
+    runner._wait_for_pane_ready("p1")
+    assert len(called) == 0
+
+
+def test_wait_for_pane_ready_settles(monkeypatch):
+    import json
+    import subprocess
+    runner = HerdrRunner(dry_run=False)
+
+    class MockCompletedProcess:
+        def __init__(self, stdout="", returncode=0):
+            self.stdout = stdout
+            self.returncode = returncode
+
+    def mock_run(cmd, *args, **kwargs):
+        if "process-info" in cmd:
+            return MockCompletedProcess(
+                stdout=json.dumps({
+                    "result": {
+                        "process_info": {
+                            "shell_pid": 1234,
+                            "foreground_processes": [{"pid": 1234, "name": "zsh"}],
+                        }
+                    }
+                }),
+                returncode=0,
+            )
+        return MockCompletedProcess(stdout="ok", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+    runner._wait_for_pane_ready("p1", timeout=1.0)
+
+
+def test_wait_for_pane_ready_unsupported_fallback(monkeypatch):
+    import subprocess
+    runner = HerdrRunner(dry_run=False)
+
+    class MockCompletedProcess:
+        def __init__(self, stdout="", returncode=2):
+            self.stdout = stdout
+            self.returncode = returncode
+
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: MockCompletedProcess(returncode=2))
+    runner._wait_for_pane_ready("p1", timeout=1.0)
+
